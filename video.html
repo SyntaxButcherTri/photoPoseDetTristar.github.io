@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>OpenCV.js</title>
+    <style>
+      /* display loading gif and hide webpage */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.8)
+          url("http://i.stack.imgur.com/FhHRx.gif") 50% 50% no-repeat;
+      }
+
+      /* prevent scrollbar from display during load */
+      body.loading {
+        overflow: hidden;
+      }
+
+      /* display the modal when loading class is added to body */
+      body.loading .modal {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="modal"></div>
+    <h2>input</h2>
+    <!-- Screenshot button -->
+    <button id="takeScreenshot">Take Screenshot</button>
+    <!-- Upload Image button -->
+    <label for="uploadTemplate">Upload Template:</label>
+    <input type="file" id="uploadTemplate" accept="image/*" />
+    <!-- Webcam/Input video stream -->
+    <video id="videoInput" width="640" height="480"></video>
+    <!-- Live update template button -->
+    <button id="template">template shot</button>
+    <h2>output</h2>
+    <!-- Switch between edges and source -->
+    <button id="toggleDisplayMode">Toggle Display Mode</button>
+    <!-- Canvas to make changes to and give output(what the operator sees) -->
+    <canvas id="imageCanvas"></canvas>
+
+    <!-- Sliders for tuning parameters -->
+    <div>
+      <label for="gaussianBlur">Gaussian Blur Kernel Size:</label>
+      <input
+        type="range"
+        id="gaussianBlur"
+        min="1"
+        max="31"
+        step="2"
+        value="9"
+      />
+      <span id="gaussianBlurValue">9</span>
+    </div>
+    <div>
+      <label for="cannyThresholdLow">Canny Low Threshold:</label>
+      <input type="range" id="cannyThresholdLow" min="0" max="255" value="50" />
+      <span id="cannyThresholdLowValue">50</span>
+    </div>
+    <div>
+      <label for="cannyThresholdHigh">Canny High Threshold:</label>
+      <input
+        type="range"
+        id="cannyThresholdHigh"
+        min="0"
+        max="255"
+        value="100"
+      />
+      <span id="cannyThresholdHighValue">100</span>
+    </div>
+    <div>
+      <label for="matchThreshold">>Match Threshold (%):</label>
+      <input type="range" id="matchThreshold" min="0" max="100" value="70" />
+      <span id="matchThresholdValue">70</span>
+    </div>
+    <div>
+      <label for="proximity">>n pixel proximity:</label>
+      <input type="range" id="proximity" min="1" max="10" value="4" />
+      <span id="proximityValue">4</span>
+    </div>
+    <!-- Imports / js -->
+    <script src="util.js"></script>
+    <script src="photoPoseDetector.js" type="text/javascript"></script>
+    <script async src="opencv.js" onload="onOpenCvReady();"></script>
+  </body>
+</html>
