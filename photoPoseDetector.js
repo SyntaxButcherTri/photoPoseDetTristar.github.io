@@ -126,7 +126,8 @@ function processVideo(video, streaming) {
   currentEdges.delete();
   canvasFrame.delete();
 
-  requestAnimationFrame(() => processVideo(video, streaming));
+  // requestAnimationFrame(() => processVideo(video, streaming));
+  setTimeout(() => processVideo(video, streaming), 500);
 }
 
 /*
