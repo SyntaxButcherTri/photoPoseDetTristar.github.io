@@ -13,6 +13,7 @@ function onOpenCvReady() {
     main();
   };
 }
+
 /*
 This function initiates when OpenCV is ready, grab webcam permissions and call processVideo
 */
@@ -34,7 +35,7 @@ function main() {
           streaming = true; // Set the streaming flag
           canvas.width = video.videoWidth; // Set canvas width
           canvas.height = video.videoHeight; // Set canvas height
-          processVideo(video, streaming);
+          processVideo1(video, streaming);
         };
       })
       .catch(function (error) {
@@ -43,13 +44,36 @@ function main() {
   }
 }
 
-function processVideo(video, streaming) {
+function processVideo1(video, streaming) {
   if (!streaming) return;
+
+  // Define the new width and height for processing
+  let processingWidth = 160;
+  let processingHeight = 120;
+
   // Grab elements & get context in 2d for images
   let canvas = document.getElementById("imageCanvas");
   let context = canvas.getContext("2d");
-  // display input source feed
+
+  // Display input source feed
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Read the full-size frame from the canvas
+  let fullSizeFrame = cv.imread("imageCanvas");
+
+  // Create a new Mat to hold the resized frame
+  let smallFrame = new cv.Mat();
+
+  // Resize the frame
+  cv.resize(
+    fullSizeFrame,
+    smallFrame,
+    new cv.Size(processingWidth, processingHeight),
+    0,
+    0,
+    cv.INTER_LINEAR
+  );
+
   // Get values from sliders
   let gaussianBlurSize = parseInt(
     document.getElementById("gaussianBlur").value
@@ -64,14 +88,19 @@ function processVideo(video, streaming) {
     document.getElementById("matchThreshold").value
   );
   let proximity = parseInt(document.getElementById("proximity").value);
-  // define kernel size, read canvas
+
+  // Define kernel size, read canvas
   let ksize = new cv.Size(gaussianBlurSize, gaussianBlurSize);
-  let canvasFrame = cv.imread("imageCanvas");
-  // define new placeholder frames
+
+  // Define new placeholder frames
   let currentEdges = new cv.Mat();
   let grayFrame = new cv.Mat();
-  cv.cvtColor(canvasFrame, grayFrame, cv.COLOR_RGBA2GRAY, 0);
+
+  // Convert the small frame to grayscale and blur it
+  cv.cvtColor(smallFrame, grayFrame, cv.COLOR_RGBA2GRAY, 0);
   cv.GaussianBlur(grayFrame, grayFrame, ksize, 0, 0, cv.BORDER_DEFAULT);
+
+  // Perform edge detection on the small frame
   cv.Canny(
     grayFrame,
     currentEdges,
@@ -80,12 +109,29 @@ function processVideo(video, streaming) {
     3,
     false
   );
+
   if (displayMode == "canny") {
     // If canny display the edges
-    cv.imshow("imageCanvas", currentEdges);
-    // Change the canvasFrame to edges in 3 dim/channel
-    cv.cvtColor(currentEdges, canvasFrame, cv.COLOR_GRAY2BGR, 0);
+    cv.cvtColor(currentEdges, smallFrame, cv.COLOR_GRAY2BGR, 0);
+    // Create a new Mat to hold the resized edges
+    let displayEdges = new cv.Mat();
+
+    // Resize the edges back to the original size
+    cv.resize(
+      currentEdges,
+      displayEdges,
+      fullSizeFrame.size(),
+      0,
+      0,
+      cv.INTER_LINEAR
+    );
+
+    // Display the edges
+    cv.imshow("imageCanvas", displayEdges);
+    // Delete the displayEdges Mat
+    displayEdges.delete();
   }
+
   if (redEdgeOverlay !== null) {
     // Calculate match percentage
     let match = calculateProximityMatch(
@@ -104,11 +150,10 @@ function processVideo(video, streaming) {
     cv.cvtColor(coloredTemplateEdges, mask, cv.COLOR_RGBA2GRAY, 0);
     cv.threshold(mask, mask, 1, 255, cv.THRESH_BINARY);
 
-    // Change current frame's pixels to overlay the mask in realtime
     for (let i = 0; i < mask.rows; i++) {
       for (let j = 0; j < mask.cols; j++) {
         if (mask.ucharPtr(i, j)[0] === 255) {
-          let pixel = canvasFrame.ucharPtr(i, j);
+          let pixel = smallFrame.ucharPtr(i, j);
           let coloredPixel = coloredTemplateEdges.ucharPtr(i, j);
           pixel[0] = coloredPixel[0];
           pixel[1] = coloredPixel[1];
@@ -118,16 +163,31 @@ function processVideo(video, streaming) {
     }
 
     // Display the result
-    cv.imshow("imageCanvas", canvasFrame);
+    let displayOut = new cv.Mat();
+
+    // Resize the edges back to the original size
+    cv.resize(
+      smallFrame,
+      displayOut,
+      fullSizeFrame.size(),
+      0,
+      0,
+      cv.INTER_LINEAR
+    );
+
+    // Display the edges
+    cv.imshow("imageCanvas", displayOut);
+    // Delete the displayEdges Mat
+    displayOut.delete();
     mask.delete();
     coloredTemplateEdges.delete();
   }
-  grayFrame.delete();
+  fullSizeFrame.delete();
+  smallFrame.delete();
   currentEdges.delete();
-  canvasFrame.delete();
+  grayFrame.delete();
 
-  // requestAnimationFrame(() => processVideo(video, streaming));
-  setTimeout(() => processVideo(video, streaming), 500);
+  requestAnimationFrame(() => processVideo1(video, streaming));
 }
 
 /*
@@ -139,7 +199,25 @@ document.getElementById("template").addEventListener("click", function () {
   let context = canvas.getContext("2d");
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   let src = cv.imread("imageCanvas");
-  cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
+
+  // Define the new width and height for processing
+  let processingWidth = 160;
+  let processingHeight = 120;
+
+  // Create a new Mat to hold the resized frame
+  let smallFrame = new cv.Mat();
+
+  // Resize the frame
+  cv.resize(
+    src,
+    smallFrame,
+    new cv.Size(processingWidth, processingHeight),
+    0,
+    0,
+    cv.INTER_LINEAR
+  );
+
+  cv.cvtColor(smallFrame, smallFrame, cv.COLOR_RGB2GRAY, 0);
   let gaussianBlurSize = parseInt(
     document.getElementById("gaussianBlur").value
   );
@@ -150,12 +228,23 @@ document.getElementById("template").addEventListener("click", function () {
     document.getElementById("cannyThresholdHigh").value
   );
   let ksize = new cv.Size(gaussianBlurSize, gaussianBlurSize);
-  cv.GaussianBlur(src, src, ksize, 0, 0, cv.BORDER_DEFAULT);
-  cv.Canny(src, src, cannyThresholdLow, cannyThresholdHigh, 3, false);
-  let coloredEdges = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-  for (let i = 0; i < src.rows; i++) {
-    for (let j = 0; j < src.cols; j++) {
-      if (src.ucharPtr(i, j)[0] === 255) {
+  cv.GaussianBlur(smallFrame, smallFrame, ksize, 0, 0, cv.BORDER_DEFAULT);
+  cv.Canny(
+    smallFrame,
+    smallFrame,
+    cannyThresholdLow,
+    cannyThresholdHigh,
+    3,
+    false
+  );
+  let coloredEdges = new cv.Mat.zeros(
+    smallFrame.rows,
+    smallFrame.cols,
+    cv.CV_8UC3
+  );
+  for (let i = 0; i < smallFrame.rows; i++) {
+    for (let j = 0; j < smallFrame.cols; j++) {
+      if (smallFrame.ucharPtr(i, j)[0] === 255) {
         coloredEdges.ucharPtr(i, j)[0] = 255;
         coloredEdges.ucharPtr(i, j)[1] = 0;
         coloredEdges.ucharPtr(i, j)[2] = 0;
@@ -164,6 +253,7 @@ document.getElementById("template").addEventListener("click", function () {
   }
   redEdgeOverlay = coloredEdges.clone();
   src.delete();
+  smallFrame.delete();
   coloredEdges.delete();
 });
 
@@ -202,7 +292,25 @@ document
           let context = canvas.getContext("2d");
           context.drawImage(img, 0, 0);
           let src = cv.imread(canvas);
-          cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
+
+          // Define the new width and height for processing
+          let processingWidth = 160;
+          let processingHeight = 120;
+
+          // Create a new Mat to hold the resized frame
+          let smallFrame = new cv.Mat();
+
+          // Resize the frame
+          cv.resize(
+            src,
+            smallFrame,
+            new cv.Size(processingWidth, processingHeight),
+            0,
+            0,
+            cv.INTER_LINEAR
+          );
+
+          cv.cvtColor(smallFrame, smallFrame, cv.COLOR_RGB2GRAY, 0);
           let gaussianBlurSize = parseInt(
             document.getElementById("gaussianBlur").value
           );
@@ -213,12 +321,30 @@ document
             document.getElementById("cannyThresholdHigh").value
           );
           let ksize = new cv.Size(gaussianBlurSize, gaussianBlurSize);
-          cv.GaussianBlur(src, src, ksize, 0, 0, cv.BORDER_DEFAULT);
-          cv.Canny(src, src, cannyThresholdLow, cannyThresholdHigh, 3, false);
-          let coloredEdges = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-          for (let i = 0; i < src.rows; i++) {
-            for (let j = 0; j < src.cols; j++) {
-              if (src.ucharPtr(i, j)[0] === 255) {
+          cv.GaussianBlur(
+            smallFrame,
+            smallFrame,
+            ksize,
+            0,
+            0,
+            cv.BORDER_DEFAULT
+          );
+          cv.Canny(
+            smallFrame,
+            smallFrame,
+            cannyThresholdLow,
+            cannyThresholdHigh,
+            3,
+            false
+          );
+          let coloredEdges = new cv.Mat.zeros(
+            smallFrame.rows,
+            smallFrame.cols,
+            cv.CV_8UC3
+          );
+          for (let i = 0; i < smallFrame.rows; i++) {
+            for (let j = 0; j < smallFrame.cols; j++) {
+              if (smallFrame.ucharPtr(i, j)[0] === 255) {
                 coloredEdges.ucharPtr(i, j)[0] = 255;
                 coloredEdges.ucharPtr(i, j)[1] = 0;
                 coloredEdges.ucharPtr(i, j)[2] = 0;
@@ -226,6 +352,9 @@ document
             }
           }
           redEdgeOverlay = coloredEdges.clone();
+          src.delete();
+          smallFrame.delete();
+          coloredEdges.delete();
         };
         img.src = event.target.result;
       };
