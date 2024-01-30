@@ -267,18 +267,6 @@ function processVideo1(video, streaming) {
   cv.meanStdDev(laplacian, mean, stddev);
   let variance = Math.pow(stddev.data64F[0], 2);
 
-  // Set font size for the text
-  context.font = "30px Arial";
-
-  // Display 'Blurry' or 'Not Blurry' text
-  if (variance < blurThreshold) {
-    context.fillStyle = "red";
-    context.fillText("Blurry", 50, 50);
-  } else {
-    context.fillStyle = "green";
-    context.fillText("Not Blurry", 50, 50);
-  }
-
   if (displayMode == "canny") {
     // If canny display the edges
     cv.cvtColor(currentEdges, smallFrame, cv.COLOR_GRAY2BGR, 0);
@@ -350,6 +338,17 @@ function processVideo1(video, streaming) {
     displayOut.delete();
     mask.delete();
     coloredTemplateEdges.delete();
+  }
+  // Set font size for the text
+  context.font = "30px Arial";
+
+  // Display 'Blurry' or 'Not Blurry' text
+  if (variance < blurThreshold) {
+    context.fillStyle = "red";
+    context.fillText("Blurry", 50, 50);
+  } else {
+    context.fillStyle = "green";
+    context.fillText("Not Blurry", 50, 50);
   }
   fullSizeFrame.delete();
   smallFrame.delete();
