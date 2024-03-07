@@ -6,7 +6,7 @@ document.body.classList.add("loading");
 var clickFlag = false;
 var redEdgeOverlay = null;
 var displayMode = "original";
-let currentStream;
+// let currentStream;
 
 // This function is called once openCV is ready
 function onOpenCvReady() {
