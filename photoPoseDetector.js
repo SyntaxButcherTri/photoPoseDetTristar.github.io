@@ -6,19 +6,12 @@ document.body.classList.add("loading");
 var clickFlag = false;
 var redEdgeOverlay = null;
 var displayMode = "original";
-let currentStream;
 
 // This function is called once openCV is ready
 function onOpenCvReady() {
   cv["onRuntimeInitialized"] = () => {
     main();
   };
-}
-
-function stopMediaTracks(stream) {
-  stream.getTracks().forEach((track) => {
-    track.stop();
-  });
 }
 
 /*
@@ -50,6 +43,152 @@ function main() {
       });
   }
 }
+
+// function processVideo1(video, streaming) {
+//   if (!streaming) return;
+
+//   // Define the new width and height for processing
+//   let processingWidth = 160;
+//   let processingHeight = 120;
+
+//   // Grab elements & get context in 2d for images
+//   let canvas = document.getElementById("imageCanvas");
+//   let context = canvas.getContext("2d");
+
+//   // Display input source feed
+//   context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+//   // Read the full-size frame from the canvas
+//   let fullSizeFrame = cv.imread("imageCanvas");
+
+//   // Create a new Mat to hold the resized frame
+//   let smallFrame = new cv.Mat();
+
+//   // Resize the frame
+//   cv.resize(
+//     fullSizeFrame,
+//     smallFrame,
+//     new cv.Size(processingWidth, processingHeight),
+//     0,
+//     0,
+//     cv.INTER_LINEAR
+//   );
+
+//   // Get values from sliders
+//   let gaussianBlurSize = parseInt(
+//     document.getElementById("gaussianBlur").value
+//   );
+//   let cannyThresholdLow = parseInt(
+//     document.getElementById("cannyThresholdLow").value
+//   );
+//   let cannyThresholdHigh = parseInt(
+//     document.getElementById("cannyThresholdHigh").value
+//   );
+//   let matchThreshold = parseInt(
+//     document.getElementById("matchThreshold").value
+//   );
+//   let proximity = parseInt(document.getElementById("proximity").value);
+
+//   // Define kernel size, read canvas
+//   let ksize = new cv.Size(gaussianBlurSize, gaussianBlurSize);
+
+//   // Define new placeholder frames
+//   let currentEdges = new cv.Mat();
+//   let grayFrame = new cv.Mat();
+
+//   // Convert the small frame to grayscale and blur it
+//   cv.cvtColor(smallFrame, grayFrame, cv.COLOR_RGBA2GRAY, 0);
+//   cv.GaussianBlur(grayFrame, grayFrame, ksize, 0, 0, cv.BORDER_DEFAULT);
+
+//   // Perform edge detection on the small frame
+//   cv.Canny(
+//     grayFrame,
+//     currentEdges,
+//     cannyThresholdLow,
+//     cannyThresholdHigh,
+//     3,
+//     false
+//   );
+
+//   if (displayMode == "canny") {
+//     // If canny display the edges
+//     cv.cvtColor(currentEdges, smallFrame, cv.COLOR_GRAY2BGR, 0);
+//     // Create a new Mat to hold the resized edges
+//     let displayEdges = new cv.Mat();
+
+//     // Resize the edges back to the original size
+//     cv.resize(
+//       currentEdges,
+//       displayEdges,
+//       fullSizeFrame.size(),
+//       0,
+//       0,
+//       cv.INTER_LINEAR
+//     );
+
+//     // Display the edges
+//     cv.imshow("imageCanvas", displayEdges);
+//     // Delete the displayEdges Mat
+//     displayEdges.delete();
+//   }
+
+//   if (redEdgeOverlay !== null) {
+//     // Calculate match percentage
+//     let match = calculateProximityMatch(
+//       redEdgeOverlay,
+//       currentEdges,
+//       proximity
+//     );
+//     // Pick green or red based on match %
+//     let edgeColor =
+//       match >= matchThreshold ? [0, 255, 0, 255] : [255, 0, 0, 255];
+//     let coloredTemplateEdges = redEdgeOverlay.clone();
+//     applyColorToEdges(redEdgeOverlay, coloredTemplateEdges, edgeColor);
+
+//     // Create a mask from the colored template edges
+//     let mask = new cv.Mat();
+//     cv.cvtColor(coloredTemplateEdges, mask, cv.COLOR_RGBA2GRAY, 0);
+//     cv.threshold(mask, mask, 1, 255, cv.THRESH_BINARY);
+
+//     for (let i = 0; i < mask.rows; i++) {
+//       for (let j = 0; j < mask.cols; j++) {
+//         if (mask.ucharPtr(i, j)[0] === 255) {
+//           let pixel = smallFrame.ucharPtr(i, j);
+//           let coloredPixel = coloredTemplateEdges.ucharPtr(i, j);
+//           pixel[0] = coloredPixel[0];
+//           pixel[1] = coloredPixel[1];
+//           pixel[2] = coloredPixel[2];
+//         }
+//       }
+//     }
+
+//     // Display the result
+//     let displayOut = new cv.Mat();
+
+//     // Resize the edges back to the original size
+//     cv.resize(
+//       smallFrame,
+//       displayOut,
+//       fullSizeFrame.size(),
+//       0,
+//       0,
+//       cv.INTER_LINEAR
+//     );
+
+//     // Display the edges
+//     cv.imshow("imageCanvas", displayOut);
+//     // Delete the displayEdges Mat
+//     displayOut.delete();
+//     mask.delete();
+//     coloredTemplateEdges.delete();
+//   }
+//   fullSizeFrame.delete();
+//   smallFrame.delete();
+//   currentEdges.delete();
+//   grayFrame.delete();
+
+//   requestAnimationFrame(() => processVideo1(video, streaming));
+// }
 
 function processVideo1(video, streaming) {
   if (!streaming) return;
@@ -95,6 +234,7 @@ function processVideo1(video, streaming) {
     document.getElementById("matchThreshold").value
   );
   let proximity = parseInt(document.getElementById("proximity").value);
+  let blurThreshold = parseInt(document.getElementById("blurThreshold").value);
 
   // Define kernel size, read canvas
   let ksize = new cv.Size(gaussianBlurSize, gaussianBlurSize);
@@ -116,6 +256,16 @@ function processVideo1(video, streaming) {
     3,
     false
   );
+
+  // Apply Laplacian filter
+  let laplacian = new cv.Mat();
+  cv.Laplacian(grayFrame, laplacian, cv.CV_64F);
+
+  // Calculate the variance for blur detection
+  let mean = new cv.Mat();
+  let stddev = new cv.Mat();
+  cv.meanStdDev(laplacian, mean, stddev);
+  let variance = Math.pow(stddev.data64F[0], 2);
 
   if (displayMode == "canny") {
     // If canny display the edges
@@ -189,14 +339,28 @@ function processVideo1(video, streaming) {
     mask.delete();
     coloredTemplateEdges.delete();
   }
+  // Set font size for the text
+  context.font = "30px Arial";
+
+  // Display 'Blurry' or 'Not Blurry' text
+  if (variance < blurThreshold) {
+    context.fillStyle = "red";
+    context.fillText("Blurry", 50, 50);
+  } else {
+    context.fillStyle = "green";
+    context.fillText("Not Blurry", 50, 50);
+  }
   fullSizeFrame.delete();
   smallFrame.delete();
   currentEdges.delete();
   grayFrame.delete();
+  // Blur filter frames
+  laplacian.delete();
+  mean.delete();
+  stddev.delete();
 
   requestAnimationFrame(() => processVideo1(video, streaming));
 }
-
 /*
 On template shot click, get the canny edges of the current frame and feed it into our global array
 */
@@ -381,28 +545,3 @@ document
       displayMode = "original";
     }
   });
-
-document.getElementById("switchCamera").addEventListener("click", function () {
-  if (typeof currentStream !== "undefined") {
-    stopMediaTracks(currentStream);
-  }
-
-  let constraints = {
-    video: {
-      facingMode:
-        videoInput.style.transform == "scale(-1, 1)" ? "user" : "environment",
-    },
-  };
-
-  navigator.mediaDevices
-    .getUserMedia(constraints)
-    .then(function (stream) {
-      currentStream = stream;
-      videoInput.srcObject = stream;
-      return navigator.mediaDevices.enumerateDevices();
-    })
-    .then(gotDevices)
-    .catch((error) => {
-      console.error("Error: ", error);
-    });
-});
