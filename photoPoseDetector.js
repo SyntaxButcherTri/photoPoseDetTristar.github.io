@@ -6,6 +6,13 @@ document.body.classList.add("loading");
 var clickFlag = false;
 var redEdgeOverlay = null;
 var displayMode = "original";
+let currentStream;
+
+function stopMediaTracks(stream) {
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  });
+}
 
 // This function is called once openCV is ready
 function onOpenCvReady() {
@@ -374,3 +381,28 @@ document
       displayMode = "original";
     }
   });
+
+document.getElementById("switchCamera").addEventListener("click", function () {
+  if (typeof currentStream !== "undefined") {
+    stopMediaTracks(currentStream);
+  }
+
+  let constraints = {
+    video: {
+      facingMode:
+        videoInput.style.transform == "scale(-1, 1)" ? "user" : "environment",
+    },
+  };
+
+  navigator.mediaDevices
+    .getUserMedia(constraints)
+    .then(function (stream) {
+      currentStream = stream;
+      videoInput.srcObject = stream;
+      return navigator.mediaDevices.enumerateDevices();
+    })
+    .then(gotDevices)
+    .catch((error) => {
+      console.error("Error: ", error);
+    });
+});
