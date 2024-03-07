@@ -104,6 +104,6 @@ document.getElementById("proximity").addEventListener("input", function () {
   document.getElementById("proximityValue").textContent = this.value;
 });
 
-// document.getElementById("blurThreshold").addEventListener("input", function () {
-//   document.getElementById("blurThresholdValue").textContent = this.value;
-// });
+document.getElementById("blurThreshold").addEventListener("input", function () {
+  document.getElementById("blurThresholdValue").textContent = this.value;
+});
