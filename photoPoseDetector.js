@@ -57,8 +57,8 @@ function main() {
     if (!streaming) return;
 
     // Define the new width and height for processing
-    let processingWidth = 640;
-    let processingHeight = 480;
+    let processingWidth = 160;
+    let processingHeight = 120;
 
     // Grab elements & get context in 2d for images
     let canvas = document.getElementById("imageCanvas");
@@ -210,8 +210,8 @@ On template shot click, get the canny edges of the current frame and feed it int
     let src = cv.imread("imageCanvas");
 
     // Define the new width and height for processing
-    let processingWidth = 640;
-    let processingHeight = 480;
+    let processingWidth = 160;
+    let processingHeight = 120;
 
     // Create a new Mat to hold the resized frame
     let smallFrame = new cv.Mat();
