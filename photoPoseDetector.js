@@ -7,6 +7,7 @@ var clickFlag = false;
 var redEdgeOverlay = null;
 var displayMode = "original";
 let currentStream;
+var currentFacingMode = "user"; // Start with the front camera
 
 function stopMediaTracks(stream) {
   stream.getTracks().forEach((track) => {
@@ -383,18 +384,46 @@ Switch between edge mode and source mode on live feed
       }
     });
 
+  //   document
+  //     .getElementById("switchCamera")
+  //     .addEventListener("click", function () {
+  //       if (typeof currentStream !== "undefined") {
+  //         stopMediaTracks(currentStream);
+  //       }
+
+  //       let constraints = {
+  //         video: {
+  //           facingMode:
+  //             video.style.transform == "scale(-1, 1)" ? "user" : "environment",
+  //         },
+  //       };
+
+  //       navigator.mediaDevices
+  //         .getUserMedia(constraints)
+  //         .then(function (stream) {
+  //           currentStream = stream;
+  //           video.srcObject = stream;
+  //           return navigator.mediaDevices.enumerateDevices();
+  //         })
+  //         .then(gotDevices)
+  //         .catch((error) => {
+  //           console.error("Error: ", error);
+  //         });
+  //     });
+  // }
+
   document
     .getElementById("switchCamera")
     .addEventListener("click", function () {
-      if (typeof currentStream !== "undefined") {
+      if (currentStream) {
         stopMediaTracks(currentStream);
       }
 
+      // Toggle the current facing mode
+      currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+
       let constraints = {
-        video: {
-          facingMode:
-            video.style.transform == "scale(-1, 1)" ? "user" : "environment",
-        },
+        video: { facingMode: currentFacingMode },
       };
 
       navigator.mediaDevices
@@ -402,11 +431,9 @@ Switch between edge mode and source mode on live feed
         .then(function (stream) {
           currentStream = stream;
           video.srcObject = stream;
-          return navigator.mediaDevices.enumerateDevices();
         })
-        .then(gotDevices)
-        .catch((error) => {
-          console.error("Error: ", error);
+        .catch(function (error) {
+          console.error("Error switching cameras: ", error);
         });
     });
 }
